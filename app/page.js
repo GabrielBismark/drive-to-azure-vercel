@@ -2,8 +2,7 @@
 import { useState } from "react";
 
 export default function Home() {
-  // FOLDER FIXO
-  const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID; // coloque aqui o SEU FOLDER ID
+  const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID; 
 
   const [driveFiles, setDriveFiles] = useState([]);
   const [azureFiles, setAzureFiles] = useState([]);
@@ -18,7 +17,7 @@ export default function Home() {
   async function listarAzure() {
     const res = await fetch(`/api/azure/list`);
     const data = await res.json();
-    setAzureFiles(data.blobs || []); // <--- CORRIGIDO
+    setAzureFiles(data.blobs || []);
   }
 
   async function migrar() {
@@ -41,7 +40,7 @@ export default function Home() {
         Migração Google Drive → Azure Blob (Aluno_gabriel_bismark)
       </h1>
 
-      {/* BOTÕES */}
+   
       <div style={{ display: "flex", gap: 12, marginBottom: 30 }}>
         <button onClick={listarDrive} style={btn}>
           Listar Drive
@@ -54,7 +53,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* TABELAS LADO A LADO */}
+      
       <div
         style={{
           display: "grid",
@@ -63,7 +62,7 @@ export default function Home() {
           marginBottom: 40,
         }}
       >
-        {/* Tabela Drive */}
+      
         <div>
           <h2>Google Drive</h2>
           <table style={table}>
@@ -84,7 +83,7 @@ export default function Home() {
           </table>
         </div>
 
-        {/* Tabela Azure */}
+        
         <div>
           <h2>Azure Blob Storage</h2>
           <table style={table}>
@@ -106,7 +105,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* LOG */}
+    
       <div>
         <h3>Logs</h3>
         <pre
