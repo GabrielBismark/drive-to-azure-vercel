@@ -7,13 +7,14 @@ export default function Home() {
   const [log, setLog] = useState("");
 
   async function listarDrive() {
-    const res = await fetch(`/api/drive/list`);
+    const res = await fetch(`/api/drive/list`, { cache: 'no-store' });
     const data = await res.json();
     setDriveFiles(data.files || []);
   }
 
+
   async function listarAzure() {
-    const res = await fetch(`/api/azure/list`);
+    const res = await fetch(`/api/azure/list`, { cache: 'no-store' });
     const data = await res.json();
     setAzureFiles(data.blobs || []);
   }
@@ -27,7 +28,7 @@ export default function Home() {
     });
     const data = await res.json();
     setLog(JSON.stringify(data, null, 2));
-    
+
     // Atualiza listas
     listarDrive();
     listarAzure();
