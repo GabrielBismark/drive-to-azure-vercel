@@ -1,38 +1,64 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
   const [driveFiles, setDriveFiles] = useState([]);
   const [azureFiles, setAzureFiles] = useState([]);
   const [log, setLog] = useState("");
 
+  const drivePollingRef = useRef(null);
+  const azurePollingRef = useRef(null);
+
   async function listarDrive() {
-    const res = await fetch(`/api/drive/list`, { cache: 'no-store' });
-    const data = await res.json();
-    setDriveFiles(data.files || []);
+    try {
+      const res = await fetch('/api/drive/list', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.files) setDriveFiles(data.files);
+    } catch (err) {
+      console.error("Erro ao listar Drive:", err);
+    }
   }
 
-
   async function listarAzure() {
-    const res = await fetch(`/api/azure/list`, { cache: 'no-store' });
-    const data = await res.json();
-    setAzureFiles(data.blobs || []);
+    try {
+      const res = await fetch('/api/azure/list', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.blobs) setAzureFiles(data.blobs);
+    } catch (err) {
+      console.error("Erro ao listar Azure:", err);
+    }
   }
 
   async function migrar() {
     setLog("Migrando...");
-    const res = await fetch("/api/migrate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({})
-    });
-    const data = await res.json();
-    setLog(JSON.stringify(data, null, 2));
+    try {
+      const res = await fetch("/api/migrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      setLog(JSON.stringify(data, null, 2));
+      listarDrive();
+      listarAzure();
+    } catch (err) {
+      console.error("Erro ao migrar:", err);
+      setLog(err.message);
+    }
+  }
 
-    // Atualiza listas
+  useEffect(() => {
     listarDrive();
     listarAzure();
-  }
+
+    drivePollingRef.current = setInterval(listarDrive, 10000);
+    azurePollingRef.current = setInterval(listarAzure, 15000);
+
+    return () => {
+      clearInterval(drivePollingRef.current);
+      clearInterval(azurePollingRef.current);
+    };
+  }, []);
 
   return (
     <main style={{ padding: 40, fontFamily: "Arial" }}>

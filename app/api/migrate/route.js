@@ -7,20 +7,15 @@ export async function POST() {
 
     const auth = new google.auth.GoogleAuth({
       credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
-      scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+      scopes: ["https://www.googleapis.com/auth/drive.readonly"]
     });
 
     const drive = google.drive({ version: "v3", auth });
 
-    const blobService = BlobServiceClient.fromConnectionString(
-      process.env.AZURE_STORAGE_CONNECTION_STRING
-    );
-    const containerClient = blobService.getContainerClient(
-      process.env.AZURE_CONTAINER
-    );
+    const blobService = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
+    const containerClient = blobService.getContainerClient(process.env.AZURE_CONTAINER);
     await containerClient.createIfNotExists();
 
-    // LISTA APENAS ARQUIVOS REAIS, NÃO LIXEIRA, NÃO GOOGLE DOCS
     const filesResponse = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
       fields: "files(id, name, mimeType)",
@@ -40,61 +35,41 @@ export async function POST() {
     }
 
     function safeFileName(original) {
-      let base = original.replace(/\.[^/.]+$/, ""); // remove ext
-      let ext = original.includes(".")
-        ? original.split(".").pop()
-        : "bin";
-
+      let base = original.replace(/\.[^/.]+$/, "");
+      let ext = original.includes(".") ? original.split(".").pop() : "bin";
       base = sanitizeName(base);
       ext = sanitizeName(ext);
-
-      if (!base || base.length === 0) base = "arquivo";
-      if (!ext || ext.length === 0) ext = "bin";
-
+      if (!base) base = "arquivo";
+      if (!ext) ext = "bin";
       return `${base}.${ext}`;
     }
 
     for (const file of files) {
       try {
-        // IGNORA GOOGLE DOCS DO DRIVE
         if (file.mimeType.startsWith("application/vnd.google-apps")) {
-          results.push({
-            file: file.name,
-            status: "ignored-google-doc",
-          });
+          results.push({ file: file.name, status: "ignored-google-doc" });
           continue;
         }
-
-        let buffer;
-        let filename = safeFileName(file.name);
 
         const download = await drive.files.get(
           { fileId: file.id, alt: "media" },
           { responseType: "arraybuffer" }
         );
 
-        buffer = Buffer.from(download.data);
+        const buffer = Buffer.from(download.data);
+        const filename = safeFileName(file.name);
 
         const blobClient = containerClient.getBlockBlobClient(filename);
-
         await blobClient.uploadData(buffer, { overwrite: true });
 
-        results.push({
-          file: file.name,
-          savedAs: filename,
-          status: "ok",
-        });
+        results.push({ file: file.name, savedAs: filename, status: "ok" });
       } catch (err) {
-        results.push({
-          file: file.name,
-          status: "error",
-          msg: err.message,
-        });
+        results.push({ file: file.name, status: "error", msg: err.message });
       }
     }
 
-    return Response.json({ migrated: results });
+    return new Response(JSON.stringify({ migrated: results }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
