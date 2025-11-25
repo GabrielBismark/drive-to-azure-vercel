@@ -9,9 +9,10 @@ export default function Home() {
   const drivePollingRef = useRef(null);
   const azurePollingRef = useRef(null);
 
+  // Lista arquivos do Google Drive
   async function listarDrive() {
     try {
-      const res = await fetch('/api/drive/list', { cache: 'no-store' });
+      const res = await fetch(`/api/drive/list?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.files) setDriveFiles(data.files);
     } catch (err) {
@@ -19,9 +20,10 @@ export default function Home() {
     }
   }
 
+  // Lista arquivos do Azure
   async function listarAzure() {
     try {
-      const res = await fetch('/api/azure/list', { cache: 'no-store' });
+      const res = await fetch(`/api/azure/list?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.blobs) setAzureFiles(data.blobs);
     } catch (err) {
@@ -29,6 +31,7 @@ export default function Home() {
     }
   }
 
+  // Migração
   async function migrar() {
     setLog("Migrando...");
     try {
@@ -37,8 +40,14 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({})
       });
+
       const data = await res.json();
       setLog(JSON.stringify(data, null, 2));
+
+      // Delay curto para garantir replicação nos serviços
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Atualiza listas após a migração
       listarDrive();
       listarAzure();
     } catch (err) {
@@ -47,6 +56,7 @@ export default function Home() {
     }
   }
 
+  // Polling automático
   useEffect(() => {
     listarDrive();
     listarAzure();
